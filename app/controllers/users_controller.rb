@@ -31,7 +31,7 @@ class UsersController < BaseController
       redirect_to :root
     else
       flash[:error] = t("error.settings_not_updated")
-      redirect_to :back
+      redirect_to user_settings_url
     end
   end
 
@@ -46,7 +46,7 @@ class UsersController < BaseController
     unless current_user.save
       flash[:error] = t("error.image_upload_fail")
     end
-    redirect_to :back
+    redirect_to user_settings_url
   end
 
   def set_avatar_kind
@@ -62,24 +62,24 @@ class UsersController < BaseController
   def dismiss_system_notice
     current_user.has_read_system_notice = true
     current_user.save!
-    redirect_to :back
+    head :ok
   end
 
   def dismiss_dashboard_notice
     current_user.has_read_dashboard_notice = true
     current_user.save!
-    redirect_to :back
+    head :ok
   end
 
   def dismiss_group_notice
     current_user.has_read_group_notice = true
     current_user.save!
-    redirect_to :back
+    head :ok
   end
 
   def dismiss_discussion_notice
     current_user.has_read_discussion_notice = true
     current_user.save!
-    redirect_to :back
+    head :ok
   end
 end
