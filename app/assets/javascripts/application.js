@@ -34,3 +34,5 @@
 //= require votes
 //= require jquery.atwho
 //= require pop-over
+//= require external-script
+//= require loomio-metrics
