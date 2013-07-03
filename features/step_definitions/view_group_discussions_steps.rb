@@ -1,8 +1,9 @@
 Given /^a public group exists$/ do
   @group = FactoryGirl.create :group
+  @group.add_admin! FactoryGirl.create :user
   @group.viewable_by = :everyone
   @group.description = "this group is public"
-  @group.save
+  @group.save!
 end
 
 Given /^a private group exists$/ do
@@ -10,6 +11,16 @@ Given /^a private group exists$/ do
   @group.viewable_by = :members
   @group.description = "this group is private"
   @group.save
+end
+
+Given(/^a public group exists with a Spanish\-speaking admin "(.*?)"$/) do |arg1|
+  @group = FactoryGirl.create :group
+  @group.viewable_by = :everyone
+  @group.save
+  admin = @group.admins.first
+  admin.update_attribute(:language_preference, "es")
+  admin.update_attribute(:email, "#{arg1}@example.org")
+  admin.save
 end
 
 Given /^a public sub\-group exists$/ do
@@ -86,7 +97,10 @@ end
 
 Given /^I am a member of a parent\-group that has a sub\-group viewable by parent\-group members$/ do
   @parent_group = FactoryGirl.create :group
+  @admin_user = FactoryGirl.create :user
+  @parent_group.add_admin! @admin_user
   @sub_group = FactoryGirl.create :group, :parent => @parent_group, :viewable_by => :parent_group_members
+  @sub_group.add_admin! @admin_user
   @parent_group.add_member! @user
 end
 

@@ -35,43 +35,15 @@ describe Group do
     end
   end
 
-  describe "#create" do
-    #context "creates a 'welcome to loomio' discussion and" do
-      #before do
-        #@group = create :group
-        #@discussion = @group.discussions.first
-      #end
+  describe 'invitations_remaining' do
+    before do
+      @group = Group.new
+    end
 
-      #it "sets the title" do
-        #@discussion.title.should == "Example Discussion: Welcome and introduction to Loomio!"
-      #end
-
-      #it "sets the description" do
-        #@discussion.description.should_not be_nil
-      #end
-
-      #it "assigns Loomio Helper Bot as the author" do
-        #@discussion.author_id.should == User.loomio_helper_bot.id
-      #end
-
-      #it "creates an initial comment" do
-        #@discussion.comments.count.should == 1
-      #end
-
-      #it "creates a new motion" do
-        #@discussion.motions.count.should == 1
-      #end
-    #end
-
-    #it "does not create a 'welcome to loomio' discussion for subgroups" do
-      #parent = create :group
-      #group = create :group, :parent => parent
-      #group.discussions.should be_empty
-    #end
-
-    it "adds the creator as an admin" do
-      @group = create :group
-      @group.admins.should include(@group.creator)
+    it 'is max_size minus members.count' do
+      @group.max_size = 10
+      @group.should_receive(:memberships_count).and_return 5
+      @group.invitations_remaining.should == 5
     end
   end
 
@@ -154,6 +126,7 @@ describe Group do
     before :each do
       @group = create(:group)
       @subgroup = create(:group, :parent => @group)
+      @group.reload
     end
     it "cannot have a max_size" do
       @subgroup.max_size = 5
@@ -176,13 +149,13 @@ describe Group do
     end
     context "subgroup.full_name" do
       it "contains parent name" do
-        @subgroup.full_name.should == "#{@subgroup.parent_name} - #{@subgroup.name}"
-        @subgroup.full_name(": ").should ==
-          "#{@subgroup.parent_name}: #{@subgroup.name}"
+        @subgroup.full_name.should == "#{@group.name} - #{@subgroup.name}"
       end
-      it "can have an optionally defined separator between names" do
-        @subgroup.full_name(": ").should ==
-          "#{@subgroup.parent_name}: #{@subgroup.name}"
+      it "updates if parent_name changes" do
+        @group.name = "bluebird"
+        @group.save!
+        @subgroup.reload
+        @subgroup.full_name.should == "#{@group.name} - #{@subgroup.name}"
       end
     end
   end
@@ -205,9 +178,6 @@ describe Group do
     it "can promote requested member to admin" do
       @group.add_request!(@user)
       @group.add_admin!(@user)
-    end
-    it "has an admin email" do
-      @group.admin_email.should == @group.creator_email
     end
     it "can be administered by admin of parent" do
       @subgroup = build(:group, :parent => @group)
@@ -246,11 +216,6 @@ describe Group do
         @group.membership_requests.find_by_user_id(@user).should \
           == @user.membership_requests.find_by_group_id(@group)
       end
-      it "should send group admins a notification email" do
-        GroupMailer.should_receive(:new_membership_request).with(kind_of(Membership))
-          .and_return(stub(deliver: true))
-        @group.add_request!(@user)
-      end
     end
   end
 
@@ -283,6 +248,25 @@ describe Group do
     it "returns false there is no membership" do
       @group.stub(:membership).with(@user)
       @group.activity_since_last_viewed?(@user).should == false
+    end
+  end
+
+  describe 'archive!' do
+    let(:group) {FactoryGirl.create(:group)}
+    let(:user) {FactoryGirl.create(:user)}
+
+    before do
+      group.add_member!(user)
+      group.archive!
+    end
+
+    it 'sets archived_at on the group' do
+      group.archived_at.should be_present
+
+    end
+
+    it 'archives the memberships of the group' do
+      group.memberships.all?{|m| m.archived_at.should be_present}
     end
   end
 end

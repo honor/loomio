@@ -203,27 +203,6 @@ describe User do
     end
   end
 
-  describe "inviting user to Loomio and to group" do
-    before do
-      @inviter = create :user
-      @group = create :group
-      @user = User.invite_and_notify!({email: "foo@example.com"}, @inviter, @group)
-    end
-
-    it "adds user to group" do
-      @group.invited_users.should include(@user)
-    end
-
-    it "adds inviter to membership" do
-      @user.memberships.first.inviter.should == @inviter
-    end
-  end
-
-  it "invited user should have email as name" do
-    user = User.invite_and_notify!({email: "foo@example.com"}, create(:user), create(:group))
-    user.name.should == user.email
-  end
-
   it "can find user by email (case-insensitive)" do
     user = create(:user, email: "foobar@example.com")
     User.find_by_email("foObAr@exaMPLE.coM").should == user
@@ -444,7 +423,7 @@ describe User do
       @user1 = User.new(name: "Test User", email: "test1@example.com", password: "password")
       @user2 = User.new(name: "Test User", email: "test2@example.com", password: "password")
     end
-    it "generates a unique username after invitation accepted" do
+    it "generates a unique username" do
       @user1.generate_username
       @user1.save!
       @user2.generate_username
@@ -503,7 +482,18 @@ describe User do
       other_user = create :user
       user.in_same_group_as?(other_user).should == false
     end
+  end
 
+  describe "belongs_to_paying_group" do
+    it "returns true if user is a member of a paying group" do
+      group.paying_subscription = true
+      group.save!
+      group.add_member!(user)
+      user.belongs_to_paying_group?.should == true
+    end
+    it "returns false if user is not a member of a paying group" do
+      group.paying_subscription == false
+    end
   end
 
 end

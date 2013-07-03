@@ -15,7 +15,7 @@ Loomio::Application.configure do
   config.assets.compress = true
 
   # Don't fallback to assets pipeline if a precompiled asset is missed
-  # config.assets.compile = false
+  config.assets.compile = false
 
   # Generate digests for assets URLs
   config.assets.digest = true
@@ -42,13 +42,9 @@ Loomio::Application.configure do
 
   # Enable serving of images, stylesheets, and JavaScripts from an asset server
   # config.action_controller.asset_host = "http://assets.example.com"
-  config.action_controller.asset_host = "https://#{ENV['FOG_DIRECTORY']}.s3.amazonaws.com"
-  config.action_mailer.asset_host = "https://#{ENV['FOG_DIRECTORY']}.s3.amazonaws.com"
-
 
   # Precompile additional assets (application.js, application.css, and all non-JS/CSS are already added)
   # config.assets.precompile += %w( search.js )
-  config.assets.precompile += %w(active_admin.css active_admin.js frontpage.js frontpage.css)
 
   # Enable threaded mode
   # config.threadsafe!
@@ -60,6 +56,9 @@ Loomio::Application.configure do
   # Send deprecation notices to registered listeners
   config.active_support.deprecation = :notify
 
+  config.action_mailer.default_url_options = {
+    :host => 'loomio-staging.herokuapp.com',
+  }
 
   if ENV['ENABLE_STAGING_EMAILS']
     # Send emails using SendGrid
@@ -72,14 +71,15 @@ Loomio::Application.configure do
       :password       => ENV['SENDGRID_PASSWORD'],
       :domain         => 'loomio.org'
     }
+    config.action_mailer.raise_delivery_errors = true
+    # Email admin when server gets exceptions!
+    config.middleware.use ExceptionNotifier,
+      :email_prefix => "[Loomio STAGING Exception] ",
+      :sender_address => %{"Exception Notifier" <staging-exceptions@loomio.org>},
+      :exception_recipients => [ENV['EXCEPTION_RECIPIENT']]
   else
     config.action_mailer.delivery_method = :test
   end
-
-  config.action_mailer.raise_delivery_errors = true
-  config.action_mailer.default_url_options = {
-    :host => 'loomio-staging.herokuapp.com',
-  }
 
   # Store avatars on Amazon S3
   config.paperclip_defaults = {

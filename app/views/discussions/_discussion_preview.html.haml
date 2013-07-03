@@ -1,5 +1,4 @@
 .clearfix
-  %span{ class: css_class_unread_group_activity_for(discussion, current_user)}
   %div{ class: css_class_unread_discussion_activity_for(this_group, discussion, current_user), id: "discussion-preview-#{discussion.id}" }
     %a.selector-discussion-link{ href: discussion_path(discussion) }
       - if user_signed_in? && discussion.current_motion
@@ -16,8 +15,8 @@
             = discussion_activity
       .discussion-date-info
         -if discussion.current_motion
-          - if discussion.current_motion_close_date
-            .proposal-close-date= "#{time_ago_in_words(discussion.current_motion_close_date)} until close"
+          - if discussion.current_motion_close_at
+            .proposal-close-date= "#{time_ago_in_words(discussion.current_motion_close_at)} until close"
         - else
           .latest-comment-time= "#{t('ago', :quantity_of_time => time_ago_in_words(discussion.latest_comment_time))}"
     - if discussion.current_motion
@@ -49,7 +48,7 @@
           diameter: 25
           padding: 1
           gap: 1
-          shadow: 0.75
+          shadow: 0
 
       # IE8 FIX - for some reason we have to load the graph after everything else.
       # Otherwise, the graph doesn't display in IE8.

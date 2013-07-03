@@ -47,6 +47,7 @@ describe DiscussionsController do
           motion.stub(:open_close_motion)
           motion.stub(:voting?).and_return(true)
           discussion.stub(:history)
+          discussion.stub(:filtered_activity)
           DiscussionMover.stub(:destination_groups)
         end
 
@@ -95,11 +96,11 @@ describe DiscussionsController do
 
     context "deleting a discussion" do
       before do
-        discussion.stub(:destroy)
+        discussion.stub(:delayed_destroy)
         # controller.stub(:authorize!).with(:destroy, discussion).and_return(true)
       end
       it "destroys discussion" do
-        discussion.should_receive(:destroy)
+        discussion.should_receive(:delayed_destroy)
         delete :destroy, id: discussion.id
       end
       it "redirects to group" do
@@ -166,15 +167,22 @@ describe DiscussionsController do
         discussion.stub(add_comment: @comment)
       end
 
+      context 'javascript has failed' do
+        it 'redirects to discussion' do
+          post :add_comment, comment: "Hello!", id: discussion.id, uses_markdown: false
+          response.should redirect_to discussion
+        end
+      end
+
       it "checks permissions" do
         app_controller.should_receive(:authorize!).and_return(true)
-        xhr :post, :add_comment, comment: "Hello!", id: discussion.id, global_uses_markdown: false
+        xhr :post, :add_comment, comment: "Hello!", id: discussion.id, uses_markdown: false
       end
 
       it "calls add_comment on discussion" do
         uses_markdown = false
         discussion.should_receive(:add_comment).with(user, "Hello!", uses_markdown)
-        xhr :post, :add_comment, comment: "Hello!", id: discussion.id, global_uses_markdown: uses_markdown
+        xhr :post, :add_comment, comment: "Hello!", id: discussion.id, uses_markdown: uses_markdown
       end
 
       context "unsuccessfully" do
@@ -197,9 +205,7 @@ describe DiscussionsController do
       end
 
       after do
-        xhr :post, :edit_description,
-          :id => discussion.id,
-          :description => "blah"
+        post :update_description, :id => discussion.id, :description => "blah"
       end
 
       it "assigns description to the model" do
@@ -238,24 +244,19 @@ describe DiscussionsController do
         @version.stub(:save!)
       end
 
-      after do
-
-      end
-
       it "calls reify on version" do
         @version.should_receive(:reify)
-        xhr :post, :update_version,
-          :version_id => @version.id
+        post :update_version, :version_id => @version.id
       end
+
       it "saves the reified version" do
         @version_item.should_receive(:save!)
-        xhr :post, :update_version,
-          :version_id => @version.id
+        post :update_version, :version_id => @version.id
       end
+
       it "renders the JS template" do
-        xhr :post, :update_version,
-          :version_id => @version.id
-        response.should render_template("discussions/update_version")
+        post :update_version, :version_id => @version.id
+        response.should be_redirect 
       end
     end
   end

@@ -5,7 +5,7 @@ Given /^I am viewing a discussion titled "(.*?)" in "(.*?)"$/ do |disc_title, gr
 end
 
 When /^I choose to create a discussion$/ do
-  click_link 'Start a discussion'
+  find("#start-new-discussion").click
 end
 
 When /^I select the group from the groups dropdown$/ do
@@ -40,7 +40,7 @@ Then /^"(.*?)" should be emailed about the new discussion$/ do |arg1|
 end
 
 Then /^clicking the link in the email should take him to the discussion$/ do
-  click_first_link_in_email
+  step 'I click the third link in the email'
   page.should have_content(@discussion_title)
 end
 
@@ -58,6 +58,7 @@ end
 
 When /^I enable markdown for the discussion description$/ do
   find('#discussion-markdown-dropdown-link').click
+  find('#discussion-markdown-dropdown-link').click
   find('#discussion-markdown-dropdown .enable-markdown-link').click
 end
 
@@ -66,7 +67,7 @@ When /^I disable markdown for the discussion description$/ do
   find('#discussion-markdown-dropdown .disable-markdown-link').click
 end
 
-Then /^the discussion desription should render markdown$/ do
+Then /^the discussion description should render markdown$/ do
   page.find('.description-body').should have_content('this markdown')
   page.find('.description-body').should_not have_content('_this markdown_')
 end

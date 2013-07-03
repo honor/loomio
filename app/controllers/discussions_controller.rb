@@ -1,12 +1,12 @@
 class DiscussionsController < GroupBaseController
   inherit_resources
-  load_and_authorize_resource :except => [:show, :new, :create, :index]
+  load_and_authorize_resource :except => [:show, :new, :create, :index, :activity_counts]
   before_filter :authenticate_user!, :except => [:show, :index]
   before_filter :check_group_read_permissions, :only => :show
   after_filter :store_location, :only => :show
 
   rescue_from ActiveRecord::RecordNotFound do
-    render 'application/not_found', locals: { item: t(:discussion) }
+    render 'application/display_error', locals: { message: t('error.not_found') }
   end
 
   def new
@@ -34,7 +34,7 @@ class DiscussionsController < GroupBaseController
 
   def destroy
     @discussion = Discussion.find(params[:id])
-    @discussion.destroy
+    @discussion.delayed_destroy
     flash[:success] = t("success.discussion_deleted")
     redirect_to @discussion.group
   end
@@ -65,6 +65,7 @@ class DiscussionsController < GroupBaseController
     @vote = Vote.new
     @current_motion = @discussion.current_motion
     @activity = @discussion.activity
+    @filtered_activity = @discussion.filtered_activity
     assign_meta_data
     if params[:proposal]
       @displayed_motion = Motion.find(params[:proposal])
@@ -81,9 +82,10 @@ class DiscussionsController < GroupBaseController
 
   def move
     @discussion = Discussion.find(params[:id])
+    origin = @discussion.group
     destination = Group.find(params[:discussion][:group_id])
     @discussion.group_id = params[:discussion][:group_id]
-    if DiscussionMover.can_move?(current_user, destination) && @discussion.save!
+    if DiscussionMover.can_move?(current_user, origin, destination) && @discussion.save!
       flash[:success] = "Discussion successfully moved."
     else
       flash[:error] = "Discussion could not be moved."
@@ -94,8 +96,12 @@ class DiscussionsController < GroupBaseController
   def add_comment
     if params[:comment].present?
       @discussion = Discussion.find(params[:id])
-      @comment = @discussion.add_comment(current_user, params[:comment], params[:global_uses_markdown])
+      @comment = @discussion.add_comment(current_user, params[:comment], params[:uses_markdown])
+      current_user.update_attributes(uses_markdown: params[:uses_markdown])
       ViewLogger.discussion_viewed(@discussion, current_user)
+      unless request.xhr?
+        redirect_to @discussion
+      end
     else
       head :ok
     end
@@ -108,24 +114,23 @@ class DiscussionsController < GroupBaseController
       flash[:notice] = "A current proposal already exists for this disscussion."
     else
       @motion = Motion.new
+      @motion.set_default_close_at_date_and_time
       @motion.discussion = discussion
       @group = GroupDecorator.new(discussion.group)
       render 'motions/new'
     end
   end
 
-  def edit_description
+  def update_description
     @discussion = Discussion.find(params[:id])
     @discussion.set_description!(params[:description], params[:description_uses_markdown], current_user)
-    @last_collaborator = User.find @discussion.originator.to_i
-    respond_to do |format|
-      format.js { render :action => 'update_version' }
-    end
+    redirect_to @discussion
   end
 
   def edit_title
     @discussion = Discussion.find(params[:id])
     @discussion.set_title!(params[:title], current_user)
+    redirect_to @discussion
   end
 
   def show_description_history
@@ -153,11 +158,17 @@ class DiscussionsController < GroupBaseController
   def update_version
     @version = Version.find(params[:version_id])
     @version.reify.save!
-    @discussion = @version.item
-    @last_collaborator = User.find @discussion.originator.to_i
-    respond_to do |format|
-      format.js
+    redirect_to @version.reify()
+  end
+
+  def activity_counts
+    # this ensures that you can't ask for comment counts for discussions you dont belong to 
+    discussion_ids = current_user.discussion_ids & params[:discussion_ids].split('x').map(&:to_i)
+
+    counts = Discussion.find(discussion_ids).map do |discussion|
+      discussion.number_of_comments_since_last_looked(current_user)
     end
+    render json: counts
   end
 
   private

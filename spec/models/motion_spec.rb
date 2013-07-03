@@ -1,15 +1,14 @@
 require 'spec_helper'
 
 describe Motion do
-  it { should have_many(:events).dependent(:destroy) }
-
-  subject do
-    @motion = Motion.new
-    @motion.valid?
-    @motion
+  it "assigns the close_at from close_at_* fields" do
+    close_date = "23-05-2013"
+    close_time = "15:00"
+    time_zone = "Saskatchewan"
+    motion = build(:motion, close_at_date: close_date, close_at_time: close_time, close_at_time_zone: time_zone)
+    motion.save!
+    motion.close_at.in_time_zone("Saskatchewan").to_s.should == "2013-05-23 15:00:00 -0600"
   end
-  it {should have(1).errors_on(:name)}
-  it {should have(1).errors_on(:author)}
 
   describe "#user_has_voted?(user)" do
     it "returns true if the given user has voted on motion" do
@@ -28,26 +27,6 @@ describe Motion do
     end
   end
 
-  describe "#set_close_date(date)" do
-    before do
-      @motion = create(:motion)
-    end
-    context "date is a future date" do
-      it "updates close_date" do
-        future_date = 2.days.from_now
-        @motion.set_close_date!(future_date)
-        @motion.close_date.should == future_date
-      end
-    end
-    context "date is a past date" do
-      it "does not update close_date" do
-        past_date = 2.days.ago
-        @motion.set_close_date!(past_date)
-        @motion.close_date.should_not  == past_date
-      end
-    end
-  end
-
   context "events" do
     before do
       @user = create :user
@@ -56,10 +35,7 @@ describe Motion do
       @discussion = create :discussion, :group => @group
     end
     it "fires new_motion event if a motion is created successfully" do
-      motion = Motion.new
-      motion.name = "That we create me"
-      motion.author = @user
-      motion.discussion = @discussion
+      motion = build(:motion)
       motion.should_receive(:fire_new_motion_event)
       motion.save!
     end
@@ -67,11 +43,6 @@ describe Motion do
       motion = create :motion, :discussion => @discussion
       Events::MotionClosed.should_receive(:publish!)
       motion.close_motion!(@user)
-    end
-    it "adds edit motion close date activity if a motion close date is edited" do
-      motion = create :motion, :discussion => @discussion
-      motion.should_receive(:fire_motion_close_date_edited_event).with(@user)
-      motion.set_close_date!(2.days.from_now, @user)
     end
   end
 
@@ -107,8 +78,8 @@ describe Motion do
 
   it "can have a close date" do
     @motion = create(:motion)
-    @motion.close_date = '2012-12-12'
-    @motion.close_date.should == Date.parse('2012-12-12')
+    @motion.close_at = '2012-12-12'
+    @motion.close_at.should == Date.parse('2012-12-12')
     @motion.should be_valid
   end
 
@@ -331,6 +302,35 @@ describe Motion do
     it "works if no statement given" do
       @vote = @motion.vote!(@motion.author, 'yes')
       @vote.should_not be_nil
+    end
+  end
+
+  describe 'update_vote_counts!', focus: true do
+    context 'there is 1 vote for each position' do
+      let(:group){FactoryGirl.create :group}
+      let(:discussion){FactoryGirl.create :discussion, group: group}
+      let(:motion){FactoryGirl.create :motion, discussion: discussion}
+
+      before do
+        Vote::POSITIONS.each do |position|
+          user = create(:user)
+          group.add_member!(user)
+
+          vote = Vote.new(position: position)
+          vote.motion = motion
+          vote.user = user
+          vote.save!
+        end
+      end
+
+      context 'after updating the vote_counts' do
+        it 'has counts of 1' do
+          motion.yes_votes_count.should == 1
+          motion.no_votes_count.should == 1
+          motion.abstain_votes_count.should == 1
+          motion.block_votes_count.should == 1
+        end
+      end
     end
   end
 end

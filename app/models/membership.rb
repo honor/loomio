@@ -4,7 +4,7 @@ class Membership < ActiveRecord::Base
 
   class MemberOfParentGroupValidator < ActiveModel::EachValidator
     def validate_each(object, attribute, value)
-      if object.group_parent.present? && !object.group_parent.users_and_invited_users.include?(value)
+      if object.group_parent.present? && !object.group_parent.users.include?(value)
         object.errors.add attribute, "must be a member of this group's parent"
       end
     end
@@ -22,6 +22,7 @@ class Membership < ActiveRecord::Base
   belongs_to :inviter, :class_name => "User"
   has_many :events, :as => :eventable, :dependent => :destroy
 
+  default_scope -> { where(archived_at: nil) }
   scope :for_group, lambda {|group| where(:group_id => group)}
   scope :with_access, lambda {|access| where(:access_level => access)}
 
@@ -70,6 +71,10 @@ class Membership < ActiveRecord::Base
     end
   end
 
+  def admin?
+    access_level == 'admin'
+  end
+
 
   private
 
@@ -84,6 +89,7 @@ class Membership < ActiveRecord::Base
   end
 
   def destroy_subgroup_memberships
+    return if group.nil? #necessary if group is missing (as in case of production data)
     group.subgroups.each do |subgroup|
       membership = subgroup.memberships.find_by_user_id(user.id)
       membership.destroy if membership
@@ -91,6 +97,7 @@ class Membership < ActiveRecord::Base
   end
 
   def remove_open_votes
+    return if group.nil? #necessary if group is missing (as in case of production data)
     discussions = Queries::VisibleDiscussions.for(group, user)
     discussions.with_current_motions_user_has_voted_on.each do |discussion|
       votes = discussion.current_motion.votes.where(:user_id => user.id)

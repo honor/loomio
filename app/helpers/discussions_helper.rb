@@ -20,17 +20,11 @@ module DiscussionsHelper
     css_class
   end
 
-  def css_class_unread_group_activity_for(discussion, user)
-    css_class = "group-activity-indicator"
-    css_class += " unread-group-activity" if user_signed_in? && params[:group_id] && discussion.has_activity_since_group_last_viewed?(user)
-    css_class
-  end
-
-  def css_class_for_close_date(motion)
+  def css_class_for_close_at(motion)
     css_class = "popover-close-date label"
 
-    if motion.close_date
-      hours_left = (((Time.now - motion.close_date) / 60) / 60) * -1
+    if motion.close_at
+      hours_left = (((Time.now - motion.close_at) / 60) / 60) * -1
       css_class += " color-urgent" if hours_left < 30
       css_class += " color-warning" if (hours_left >= 3) && (hours_left <= 24)
       css_class += " color-ok" if hours_left > 24

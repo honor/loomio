@@ -10,10 +10,16 @@ Given /^my browser language header is set to "(.*?)"$/ do |arg1|
 end
 
 Given /^I have not set my language preference$/ do
+  puts "language preference: #{@user.language_preference}"
 end
 
 Given /^my language preference is set to "(.*?)"$/ do |arg1|
   @user.update_attribute(:language_preference, arg1)
+end
+
+Given(/^"(.*?)"s language preference is set to "(.*?)"$/) do |arg1, arg2|
+  user = User.find_by_email("#{arg1}@example.org")
+  user.update_attribute(:language_preference, arg2)
 end
 
 Then /^I change my language preference to Espanol$/ do

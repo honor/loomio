@@ -1,5 +1,15 @@
 #encoding: UTF-8
 module ApplicationHelper
+  def time_formatted_relative_to_age(time)
+    current_time = Time.now
+    if time.to_date == Time.now.to_date
+      l(time, format: :for_today)
+    elsif time.year != current_time.year
+      l(time.to_date, format: :for_another_year)
+    else
+      l(time.to_date, format: :for_this_year)
+    end
+  end
 
   def twitterized_type(type)
     case type
@@ -40,18 +50,12 @@ module ApplicationHelper
     end
   end
 
-  def email_subject_prefix(group_name)
-    "[Loomio: #{group_name}]"
-  end
-
   def signed_out?
     not signed_in?
   end
 
   def render_rich_text(text, md_boolean=true)
-    if text == nil #there's gotta be a better way to do this? text=" " in args wasn't working
-      text = " "
-    end
+    return "" if text.blank?
 
     if md_boolean
       options = [
@@ -78,46 +82,8 @@ module ApplicationHelper
     Redcarpet::Render::SmartyPants.render(output).html_safe
   end
 
-  def help_text_dismissed?
-    return true unless current_user
-    case "#{controller_name} #{action_name}"
-    when 'discussions show'
-      current_user.has_read_discussion_notice?
-    when 'groups show'
-      current_user.has_read_group_notice?
-    when 'dashboard show'
-      current_user.has_read_dashboard_notice?
-    else
-      true
-    end
-  end
-
-  def dismiss_help_text_path
-    case "#{controller_name} #{action_name}"
-      when 'discussions show'
-        return dismiss_discussion_notice_for_user_path
-      when 'groups show'
-        return dismiss_group_notice_for_user_path
-      when 'dashboard show'
-        return dismiss_dashboard_notice_for_user_path
-    end
-  end
-
-  def help_text(group)
-    case "#{controller_name} #{action_name}"
-      when 'discussions show'
-        t :discussion_help_text
-      when 'groups show'
-        t :group_help_text, :group_name => group.full_name
-      when 'dashboard show'
-        t :dashboard_help_text, :link => "#{link_to "contact@loomio.org", 'mailto:contact@loomio.org', :target =>'_blank'}\n\n"
-    end
-  end
-
-  def render_help_text(group)
-    unless help_text_dismissed?
-      render '/application/help_text', message: help_text(group), path: dismiss_help_text_path
-    end
+  def show_contribution_icon?
+    current_user && !current_user.belongs_to_paying_group?
   end
 end
 

@@ -3,18 +3,14 @@ ActiveAdmin.register User do
   filter :name
   filter :email
 
-  index :download_links => false do
+  index do
     column :name
     column :email
-    column "Invitation Link" do |user|
-      if user.invitation_token
-        link_to "Invite link (#{user.invitation_token})",
-          accept_invitation_url(user, :invitation_token => user.invitation_token)
-      end
-    end
     column :created_at
     column :last_sign_in_at
-    column :is_admin
+    column "Coordinator" do |user|
+      user.adminable_groups.any?
+    end
     column "No. of groups", :memberships_count
     default_actions
   end
@@ -37,5 +33,17 @@ ActiveAdmin.register User do
     user.is_admin = params[:user][:is_admin]
     user.save
     redirect_to admin_users_url, :notice => "User updated"
+  end
+  
+  csv do
+    column :id
+    column :name
+    column :email
+    column :created_at
+    column :last_sign_in_at
+    column "Coordinator" do |user|
+      user.adminable_groups.any?
+    end
+    column :memberships_count
   end
 end

@@ -34,11 +34,11 @@ Then /^the comment should format markdown characters$/ do
 end
 
 Then /^comment markdown should now be on by default$/ do
-  find('#discussion-activity-container').should have_css('.markdown-on')
+  find('#content-comments').should have_css('.markdown-on')
 end
 
 Then /^comment markdown should now be off by default$/ do
-  find('#discussion-activity-container').should have_css('.markdown-off')
+  find('#content-comments').should have_css('.markdown-off')
 end
 
 Then /^there should be an anchor for the comment$/ do
@@ -46,11 +46,11 @@ Then /^there should be an anchor for the comment$/ do
 end
 
 Then /^I should see a permalink to the anchor for that comment$/ do
-  find('.activity-item-time a')[:href].should match("#comment-2")
+  find('.activity-item-time a[href="#comment-2"]').should be_present
 end
 
 Then /^the comment should autolink links$/ do
-  page.should have_link('xkcd.org', {:href => 'http://xkcd.org', :target => '_blank'})
+  page.should have_link('xkcd.org', {:href => 'http://xkcd.org'})
 end
 
 Then /^the comment should include appropriate new lines$/ do

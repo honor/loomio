@@ -41,7 +41,7 @@ When /^I visit the subgroup page$/ do
 end
 
 When /^I click add new member$/ do
-  find("#group-add-members").click
+  find("#button-container").find("#group-add-members").click
 end
 
 When /^I select "(.*?)" from the list of members$/ do |arg1|
@@ -50,7 +50,9 @@ When /^I select "(.*?)" from the list of members$/ do |arg1|
 end
 
 Then /^the request is approved$/ do
-  Membership.last.promote_to_member!
+  @membership = Membership.last
+  @membership.promote_to_member!
+  UserMailer.group_membership_approved(@membership.user, @membership.group).deliver
 end
 
 Then /^they should be added to the group$/ do
@@ -78,7 +80,7 @@ Then /^I should see "(.*?)" listed in the invited list$/ do |email|
 end
 
 Then /^I should not see the add member button$/ do
-  find("#add-members").should_not have_content("#group-add-members")
+  page.should_not have_content("#group-add-members")
 end
 
 Then /^I should not see the invited user list$/ do
@@ -103,5 +105,9 @@ end
 
 Then /^I should get an email with subject "(.*?)"$/ do |arg1|
   last_email = ActionMailer::Base.deliveries.last
-  last_email.subject.should =~ /You've been added to a group/
+  last_email.subject.should =~ /Membership approved/
+end
+
+When(/^I confirm the selection$/) do
+  find("#submit-add-members").click
 end
