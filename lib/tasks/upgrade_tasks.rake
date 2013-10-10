@@ -1,4 +1,38 @@
 namespace :upgrade_tasks do
+  task :'2013-10-part2-update_item_counts_post_counter_caches' => :environment do
+    puts 'Updating discussions.items_count'
+    Discussion.find_each do |d|
+      puts d.id if d.id % 100 == 0
+      Discussion.reset_counters(d.id, :items)
+    end
+
+    puts 'Updating discussion_readers.read_items_count'
+    DiscussionReader.find_each do |dr|
+      next unless dr.discussion.present?
+      puts dr.id if dr.id % 100 == 0
+      dr.update_attribute(:read_items_count,
+                          dr.discussion.items.where('created_at <= ?', dr.last_read_at).count)
+    end
+  end
+
+  task :'2013-10-part1-update_item_counts_pre_counter_caches' => :environment do
+    puts 'Updating discussions.items_count'
+    Discussion.find_each do |d|
+      puts d.id if d.id % 100 == 0
+      d.update_attribute(:items_count, Event.where(discussion_id: d.id).count)
+    end
+
+    puts 'Updating discussion_readers.read_items_count'
+    DiscussionReader.find_each do |dr|
+      next unless dr.discussion.present?
+      puts dr.id if dr.id % 100 == 0
+      dr.update_attribute(:read_items_count,
+                          Event.where(discussion_id: dr.discussion.id).
+                                where('created_at <= ?', dr.last_read_at).count)
+    end
+
+  end
+
   task :update_comments_counts => :environment do
     Discussion.reset_column_information
     Discussion.find_each do |d|
@@ -18,7 +52,7 @@ namespace :upgrade_tasks do
     else
       last_viewed_at_column_name = 'discussion_last_viewed_at'
     end
-      
+
     DiscussionReadLog.reset_column_information
     DiscussionReadLog.find_each do |drl|
       if drl.discussion.present?

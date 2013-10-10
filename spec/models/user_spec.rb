@@ -19,10 +19,8 @@ describe User do
     user = User.new
     user.email = '"Joe Gumby" <joe@gumby.com>'
     user.valid?
-    user.should have(2).errors_on(:email)
+    user.should have(1).errors_on(:email)
   end
-
-  it "has uploaded avatar less than 1000kb "
 
   it "cannot have invalid avatar_kinds" do
     user.avatar_kind = 'bad'
@@ -356,23 +354,22 @@ describe User do
     end
   end
 
-  describe "belongs_to_paying_group" do
+  describe "belongs_to_manual_subscription_group?" do
     it "returns true if user is a member of a manual subscription group" do
-      group.payment_plan = 'manual_subscription'
-      group.save!
-      group.add_member!(user)
-      user.belongs_to_paying_group?.should be_true
+      group.update_attribute :payment_plan, 'manual_subscription'
+      group.add_member! user
+      user.belongs_to_manual_subscription_group?.should be_true
     end
 
-    it "returns true if user is a member of a subscription group" do
-      group.payment_plan = 'subscription'
-      group.save!
-      group.add_member!(user)
-      user.belongs_to_paying_group?.should be_true
+    it "returns false if user is a member of a subscription group" do
+      group.update_attribute :payment_plan, 'subscription'
+      group.add_member! user
+      user.belongs_to_manual_subscription_group?.should be_false
     end
 
-    it "returns false if user is not a member of a paying group" do
-      user.belongs_to_paying_group?.should be_false
+    it "returns false if user is a member of a paying group" do
+      group.update_attribute :payment_plan, 'pwyc'
+      user.belongs_to_manual_subscription_group?.should be_false
     end
   end
 end

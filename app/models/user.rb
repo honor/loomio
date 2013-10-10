@@ -13,7 +13,7 @@ class User < ActiveRecord::Base
 
   # Include default devise modules. Others available are:
   # :token_authenticatable, :encryptable, :confirmable, :lockable, :timeoutable and :omniauthable
-  devise :database_authenticatable, :recoverable, :registerable, :rememberable, :trackable, :validatable
+  devise :database_authenticatable, :recoverable, :registerable, :rememberable, :trackable, :omniauthable
 
   validates :name, :presence => true
   validates :email, :presence => true, uniqueness: true, email: true
@@ -94,6 +94,10 @@ class User < ActiveRecord::Base
 
   #scope :unviewed_notifications, notifications.where('viewed_at IS NULL')
 
+  def self.email_taken?(email)
+    User.find_by_email(email).present?
+  end
+
   def first_name
     name.split(' ').first
   end
@@ -106,6 +110,7 @@ class User < ActiveRecord::Base
   def ability
     @ability ||= Ability.new(self)
   end
+
   delegate :can?, :cannot?, :to => :ability
 
   def voting_motions
@@ -274,8 +279,8 @@ class User < ActiveRecord::Base
     (group_ids & other_user.group_ids).present?
   end
 
-  def belongs_to_paying_group?
-    groups.where(payment_plan: ['subscription', 'manual_subscription']).exists?
+  def belongs_to_manual_subscription_group?
+    groups.where(payment_plan: ['manual_subscription']).exists?
   end
 
   private
